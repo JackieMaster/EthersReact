@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
+import { connectMetamask } from "../../connections";
+import { shortenAddress } from "../../utils";
 
 export default function NavBar() {
+  const [address, setAddress] = useState("");
+  const connect = async () => {
+    const account = await connectMetamask();
+    setAddress(account);
+  };
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-6xl mx-auto px-4">
@@ -13,7 +20,7 @@ export default function NavBar() {
                   alt="Logo"
                   className="h-8 w-8 mr-2"
                 />
-                <span className="font-semibold text-gray-500 text-lg">
+                <span className="font-semibold text-gray-900 text-lg">
                   SushiRoll
                 </span>
               </a>
@@ -21,12 +28,22 @@ export default function NavBar() {
           </div>
 
           <div className=" flex items-center space-x-3 ">
-            <a
-              href=""
-              className="py-2 px-2 font-medium text-white bg-green-500 rounded hover:bg-green-400 transition duration-300"
-            >
-              Connect Wallet
-            </a>
+            {address ? (
+              <button
+                border-gray-400
+                onClick={connect}
+                className="py-2 px-2 font-medium bg-gray-100 border-gray-400 rounded transition duration-300"
+              >
+                {shortenAddress(address)}
+              </button>
+            ) : (
+              <button
+                onClick={connect}
+                className="py-2 px-2 font-medium text-white bg-green-500 rounded hover:bg-green-400 transition duration-300"
+              >
+                Connect to Metamask
+              </button>
+            )}
           </div>
         </div>
       </div>
