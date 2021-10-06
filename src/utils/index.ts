@@ -18,8 +18,10 @@ export function isAddress(value: any): string | false {
 }
 
 // shortens the address to the format: 0x + 4 characters at start and end
-export function shortenAddress(address: string, chars = 4): string {
-    const parsed = isAddress(address)
+export function shortenAddress(address: string, userAddress: string): string {
+    const chars = 4
+    const parsed = isAddress(address) || isAddress(userAddress)
+
     if (!parsed) {
         throw Error(`Error due to Invalid 'address' parameter '${address}'.`)
     }

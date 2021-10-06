@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { connectMetamask } from "../../connections";
 import { shortenAddress } from "../../utils";
+import { useEagerConnect } from "../../hooks";
 
 export default function NavBar() {
   const [address, setAddress] = useState("");
+  const userAddress = useEagerConnect();
+
   const connect = async () => {
     const account = await connectMetamask();
     setAddress(account);
@@ -28,13 +31,13 @@ export default function NavBar() {
           </div>
 
           <div className=" flex items-center space-x-3 ">
-            {address ? (
+            {address || userAddress ? (
               <button
                 border-gray-400
                 onClick={connect}
                 className="py-2 px-2 font-medium bg-gray-100 border-gray-400 rounded transition duration-300"
               >
-                {shortenAddress(address)}
+                {shortenAddress(userAddress, address)}
               </button>
             ) : (
               <button
