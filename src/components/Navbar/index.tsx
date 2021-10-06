@@ -32,13 +32,13 @@ export default function NavBar() {
           </div>
 
           <div className=" flex items-center space-x-3 ">
-            {address || userAddress ? (
+            {address ? (
               <button
                 border-gray-400
                 onClick={connect}
                 className="py-2 px-2 font-medium bg-gray-100 border-gray-400 rounded transition duration-300"
               >
-                {shortenAddress(userAddress, address)}
+                {shortenAddress(address)}
               </button>
             ) : (
               <button
