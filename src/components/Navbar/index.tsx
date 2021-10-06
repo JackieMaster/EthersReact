@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { connectMetamask } from "../../connections";
 import { shortenAddress } from "../../utils";
-import { useEagerConnect } from "../../hooks";
+import { useEagerConnect, useInactiveListener } from "../../hooks";
 
 export default function NavBar() {
   const [address, setAddress] = useState("");
-  const userAddress = useEagerConnect();
+  const userAddress = useEagerConnect(address);
+  useInactiveListener(setAddress);
 
   const connect = async () => {
     const account = await connectMetamask();
