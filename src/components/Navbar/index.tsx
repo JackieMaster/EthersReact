@@ -36,7 +36,7 @@ export default function NavBar() {
               <button
                 border-gray-400
                 onClick={connect}
-                className="py-2 px-2 font-medium bg-gray-100 border-gray-400 rounded transition duration-300"
+                className="py-2 px-2 font-medium bg-green-100 border-gray-100 rounded transition duration-300"
               >
                 {shortenAddress(address)}
               </button>
