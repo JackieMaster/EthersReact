@@ -9,12 +9,10 @@ const getAddress = async (setAddr: Function) => {
     }
 }
 
-export const useEagerConnect = (userAddress: string) => {
-    const [address, setAddress] = useState('')
+export const useEagerConnect = (setUserAddress: Function) => {
     useEffect(() => {
-        getAddress(setAddress);
-    }, [userAddress])
-    return address;
+        getAddress(setUserAddress);
+    }, [setUserAddress])
 }
 
 export function useInactiveListener(setAccount: Function) {

@@ -5,7 +5,7 @@ import { useEagerConnect, useInactiveListener } from "../../hooks";
 
 export default function NavBar() {
   const [address, setAddress] = useState("");
-  const userAddress = useEagerConnect(address);
+  useEagerConnect(setAddress);
   useInactiveListener(setAddress);
 
   const connect = async () => {
