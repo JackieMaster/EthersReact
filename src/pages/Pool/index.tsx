@@ -6,7 +6,7 @@ import Token from "../../components/Token";
 export default function Pool() {
   return (
     <div className="max-w-6xl mx-auto px-4 ">
-      <div className="grid gap-x-4 gap-y-4 grid-cols-3  bg-gray-100 px-2 py-2 rounded">
+      <div className="grid gap-x-4 gap-y-4 md:grid-cols-3  bg-gray-100 px-2 py-2 rounded">
         <div className="  shadow border-gray-100 rounded border-1 bg-white">
           <div className="p-2 semi-bold">COPY TO FIND YOUR LP TOKEN</div>
           {KovanTokenList.tokens.map((token, index) => (
