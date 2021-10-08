@@ -14,6 +14,7 @@ export default function Pool() {
           ))}
         </div>
         <div className=" flex flex-col shadow border-gray-100 rounded border-1 bg-white">
+          <div className="p-2 semi-bold">FIND YOUR LP TOKEN</div>
           <div className="p-4 min-w-full">
             <input className=" p-4 min-w-full border rounded border-gray-200 focus:blue-50 ..." />
           </div>
