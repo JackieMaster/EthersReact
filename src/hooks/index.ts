@@ -39,6 +39,7 @@ export function useInactiveListener(setAccount: Function) {
             }
 
             ethereum.on('connect', handleConnect)
+            ethereum.on('disconnect', handleChainChanged)
             ethereum.on('chainChanged', handleChainChanged)
             ethereum.on('accountsChanged', handleAccountsChanged)
             ethereum.on('networkChanged', handleNetworkChanged)
@@ -46,6 +47,7 @@ export function useInactiveListener(setAccount: Function) {
             return () => {
                 if (ethereum.removeListener) {
                     ethereum.removeListener('connect', handleConnect)
+                    ethereum.removeListener('disconnect', handleChainChanged)
                     ethereum.removeListener('chainChanged', handleChainChanged)
                     ethereum.removeListener('accountsChanged', handleAccountsChanged)
                     ethereum.removeListener('networkChanged', handleNetworkChanged)

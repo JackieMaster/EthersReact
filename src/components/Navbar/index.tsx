@@ -13,7 +13,7 @@ export default function NavBar() {
     setAddress(account);
   };
   return (
-    <nav className="bg-white shadow-sm">
+    <nav className="bg-white shadow-sm mb-4">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between">
           <div className="flex space-x-7">
@@ -36,7 +36,7 @@ export default function NavBar() {
               <button
                 border-gray-400
                 onClick={connect}
-                className="py-2 px-2 font-medium bg-green-100 border-gray-100 rounded transition duration-300"
+                className="py-2 px-2 font-medium bg-green-50 border-gray-100 rounded transition duration-300"
               >
                 {shortenAddress(address)}
               </button>
