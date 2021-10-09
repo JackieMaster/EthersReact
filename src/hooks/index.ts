@@ -1,58 +1,84 @@
 import { useEffect, useState } from 'react';
 
-const getAddress = async (setAddr: Function) => {
-    try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        setAddr(accounts[0])
-    } catch (error) {
-        console.log(error)
-    }
+import { Web3Provider } from '@ethersproject/providers'
+// import { ChainId } from '@sushiswap/sdk'
+import { useWeb3React as useWeb3ReactCore } from '@web3-react/core'
+import { isMobile } from 'react-device-detect'
+import { injected } from '../connectors'
+import { NetworkContextName } from '../constants'
+
+export function useActiveWeb3React(): any & { chainId?: any } {
+    const context = useWeb3ReactCore<Web3Provider>()
+    const contextNetwork = useWeb3ReactCore<Web3Provider>(NetworkContextName)
+    return context.active ? context : contextNetwork
 }
 
-export const useEagerConnect = (setUserAddress: Function) => {
+export function useEagerConnect() {
+    const { activate, active } = useWeb3ReactCore() // specifically using useWeb3ReactCore because of what this hook does
+    const [tried, setTried] = useState(false)
+
     useEffect(() => {
-        getAddress(setUserAddress);
-    }, [setUserAddress])
-}
-
-export function useInactiveListener(setAccount: Function) {
-
-    useEffect((): any => {
-        const { ethereum } = window as any
-        if (ethereum && ethereum.on) {
-            const handleConnect = () => {
-                console.log("Handling 'connect' event")
-            }
-            const handleChainChanged = (chainId: string | number) => {
-                console.log("Handling 'chainChanged' event with payload", chainId)
-                window.location.reload()
-            }
-            const handleAccountsChanged = (accounts: string[]) => {
-                console.log("Handling 'accountsChanged' event with payload", accounts)
-                if (accounts.length > 0) {
-                    setAccount(accounts[0])
+        injected.isAuthorized().then(isAuthorized => {
+            if (isAuthorized) {
+                activate(injected, undefined, true).catch(() => {
+                    setTried(true)
+                })
+            } else {
+                if (isMobile && window.ethereum) {
+                    activate(injected, undefined, true).catch(() => {
+                        setTried(true)
+                    })
+                } else {
+                    setTried(true)
                 }
             }
-            const handleNetworkChanged = (networkId: string | number) => {
-                console.log("Handling 'networkChanged' event with payload", networkId)
-                window.location.reload()
+        })
+    }, [activate])
+
+
+    useEffect(() => {
+        if (active) {
+            setTried(true)
+        }
+    }, [active])
+
+    return tried
+}
+
+
+export function useInactiveListener(suppress = false) {
+    const { active, error, activate } = useWeb3ReactCore()
+
+    useEffect(() => {
+        const { ethereum } = window
+
+        if (ethereum && ethereum.on && !active && !error && !suppress) {
+            const handleChainChanged = () => {
+
+                activate(injected, undefined, true).catch(error => {
+                    console.error('Failed to activate after chain changed', error)
+                })
             }
 
-            ethereum.on('connect', handleConnect)
-            ethereum.on('disconnect', handleChainChanged)
+            const handleAccountsChanged = (accounts: string[]) => {
+                if (accounts.length > 0) {
+
+                    activate(injected, undefined, true).catch(error => {
+                        console.error('Failed to activate after accounts changed', error)
+                    })
+                }
+            }
+
             ethereum.on('chainChanged', handleChainChanged)
             ethereum.on('accountsChanged', handleAccountsChanged)
-            ethereum.on('networkChanged', handleNetworkChanged)
 
             return () => {
                 if (ethereum.removeListener) {
-                    ethereum.removeListener('connect', handleConnect)
-                    ethereum.removeListener('disconnect', handleChainChanged)
                     ethereum.removeListener('chainChanged', handleChainChanged)
                     ethereum.removeListener('accountsChanged', handleAccountsChanged)
-                    ethereum.removeListener('networkChanged', handleNetworkChanged)
                 }
             }
         }
-    }, [setAccount])
+        return undefined
+    }, [active, error, suppress, activate])
 }

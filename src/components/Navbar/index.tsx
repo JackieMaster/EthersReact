@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import { connectMetamask } from "../../connections";
+import { UnsupportedChainIdError, useWeb3React } from "@web3-react/core";
 import { shortenAddress } from "../../utils";
-import { useEagerConnect, useInactiveListener } from "../../hooks";
+import { injected } from "../../connectors";
 
 export default function NavBar() {
-  const [address, setAddress] = useState("");
-  useEagerConnect(setAddress);
-  useInactiveListener(setAddress);
-
-  const connect = async () => {
-    const account = await connectMetamask();
-    setAddress(account);
+  const { account, error, activate } = useWeb3React();
+  const connect = () => {
+    try {
+      activate(injected);
+    } catch (error) {
+      console.log(error);
+    }
   };
   return (
     <nav className="bg-white shadow-sm mb-4">
@@ -32,13 +32,19 @@ export default function NavBar() {
           </div>
 
           <div className=" flex items-center space-x-3 ">
-            {address ? (
+            {account ? (
               <button
                 border-gray-400
-                onClick={connect}
                 className="py-2 px-2 font-medium bg-green-50 border-gray-100 rounded transition duration-300"
               >
-                {shortenAddress(address)}
+                {shortenAddress(account)}
+              </button>
+            ) : error && error instanceof UnsupportedChainIdError ? (
+              <button
+                onClick={connect}
+                className="py-2 px-2 font-medium text-gray-900 bg-red-100 rounded hover:bg-green-400 transition duration-300"
+              >
+                Wrong network
               </button>
             ) : (
               <button
