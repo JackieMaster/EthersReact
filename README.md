@@ -6,5 +6,7 @@ Smart Contract interaction with Ethersjs and React.
 
 https://sushiroll.netlify.app/
 
-Supported Network: Kovan
-Supported Wallet: Metamask
+### Network
+
+- Supported Network: Kovan
+- Supported Wallet: Metamask
