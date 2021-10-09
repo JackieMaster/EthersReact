@@ -7,8 +7,6 @@ import {
 } from "react-router-dom";
 import Pool from "./pages/Pool";
 import NavBar from "./components/Navbar";
-import logo from "./logo.svg";
-import { Counter } from "./features/counter/Counter";
 import "./App.css";
 import Web3ReactManager from "./components/Web3ReactManager";
 

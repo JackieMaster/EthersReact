@@ -33,10 +33,7 @@ export default function NavBar() {
 
           <div className=" flex items-center space-x-3 ">
             {account ? (
-              <button
-                border-gray-400
-                className="py-2 px-2 font-medium bg-green-50 border-gray-100 rounded transition duration-300"
-              >
+              <button className="py-2 px-2 font-medium bg-green-50 border-gray-100 rounded transition duration-300">
                 {shortenAddress(account)}
               </button>
             ) : error && error instanceof UnsupportedChainIdError ? (
