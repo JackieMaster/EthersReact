@@ -20,6 +20,7 @@ const Index: React.FC = () => {
   const [LPbalance, setLPbalance] = useState("");
   const [error, setError] = useState("");
   const [LP, setLP] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const findSelectedLP = () => {
     const [token1, token0] = KovanTokenList.tokens.filter((token) => {
@@ -31,19 +32,26 @@ const Index: React.FC = () => {
     setError("");
     setLPbalance("");
     if (isAddress(fisrtAddress.trim()) && isAddress(secondAddress.trim())) {
-      const pair = await factory?.getPair(fisrtAddress, secondAddress);
-      if (pair === AddressZero) {
-        return setError("This Pair does not exist");
+      try {
+        setLoading(true);
+        const pair = await factory?.getPair(fisrtAddress, secondAddress);
+        if (pair === AddressZero) {
+          return setError("This Pair does not exist");
+        }
+        const pairContract = getContract(
+          pair,
+          IUniswapV2PairABI,
+          library,
+          account
+        );
+        const balance = await pairContract.balanceOf(account);
+        setLPbalance(balance);
+        findSelectedLP();
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
       }
-      const pairContract = getContract(
-        pair,
-        IUniswapV2PairABI,
-        library,
-        account
-      );
-      const balance = await pairContract.balanceOf(account);
-      setLPbalance(balance);
-      findSelectedLP();
     } else {
       setError("One or two of the address input is invalid");
     }
@@ -74,10 +82,19 @@ const Index: React.FC = () => {
       />
       <div className="p-4">
         <button
+          type="button"
+          disabled={loading}
           onClick={getPairBalance}
           className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
         >
-          GET LP TOKEN
+          {loading ? (
+            <svg
+              className="animate-spin h-5 w-5 mr-3 ..."
+              viewBox="0 0 24 24"
+            ></svg>
+          ) : (
+            "GET LP TOKEN"
+          )}
         </button>
       </div>
       <div>{error}</div>
