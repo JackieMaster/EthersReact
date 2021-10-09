@@ -32,6 +32,7 @@ export default function NavBar() {
           </div>
 
           <div className=" flex items-center space-x-3 ">
+            <div className="px-4 font-extralight">Supported Network: Kovan</div>
             {account ? (
               <button className="py-2 px-2 font-medium bg-green-50 border-gray-100 rounded transition duration-300">
                 {shortenAddress(account)}
