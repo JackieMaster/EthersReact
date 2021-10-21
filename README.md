@@ -12,3 +12,10 @@ https://sushiroll.netlify.app/
 
 - Supported Network: Kovan
 - Supported Wallet: Metamask
+
+### How to setup
+
+- git clone this repository
+- run `yarn install`
+- then run yarn start to start the Dapp
+- the dapp will be started locally on port 3000

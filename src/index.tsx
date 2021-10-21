@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import { createWeb3ReactRoot, Web3ReactProvider } from "@web3-react/core";
 import "./index.css";
 import App from "./App";
-import { store } from "./app/store";
+import { store } from "./state";
 import { Provider } from "react-redux";
 import * as serviceWorker from "./serviceWorker";
 import getLibrary from "./utils/getLibrary";

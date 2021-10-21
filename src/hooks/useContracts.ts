@@ -5,6 +5,8 @@ import { abi as IUniswapV2PairABI } from '@uniswap/v2-core/build/IUniswapV2Pair.
 import { useActiveWeb3React } from './index'
 import { UNISWAP_V2_FACTORY } from '../constants'
 import UniswapV2FactoryAbi from '../constants/abi/uniswapV2Factory.json'
+import SushiRollAbi from '../constants/abi/sushiRoll.json'
+import { SUSHI_ROLL } from '../constants'
 
 
 // returns null on errors
@@ -33,8 +35,12 @@ export function usePairContract(pairAddress?: string, withSignerIfPossible?: boo
 
 export function usePair(address1: string, address2: string): any {
     const factory = useV2FactoryContract();
-    const pair =  factory?.getPair(address1, address2)
+    const pair = factory?.getPair(address1, address2)
     return usePairContract(pair)
+}
+
+export function useSushiRoll(withSignerIfPossible?: boolean): Contract | null {
+    return useContract(SUSHI_ROLL, SushiRollAbi,)
 }
 
 

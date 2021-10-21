@@ -3,6 +3,7 @@ import sushiTokenList from "@sushiswap/default-token-list";
 import KovanTokenList from "../../constants/tokenLists/kovanTokenList.json";
 import Token from "../../components/Token";
 import FindPair from "../../components/FindPair";
+import MigrateLiquidity from "../../components/MigrateLiquidity";
 
 export default function Pool() {
   return (
@@ -21,8 +22,8 @@ export default function Pool() {
         <div className=" shadow-md border-gray-100 rounded border-1 bg-white">
           <div className="p-2 font-bold">
             MIGRATE YOUR LIQUIDITY TO SUSHISWAP
+            <MigrateLiquidity />
           </div>
-          <input />
         </div>
       </div>
     </div>

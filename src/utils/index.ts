@@ -1,5 +1,7 @@
 import { getAddress } from '@ethersproject/address'
-import { ChainId } from '@uniswap/sdk'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ethers } from 'ethers'
+import { ChainId, Token } from '@uniswap/sdk'
 import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
 import { AddressZero } from '@ethersproject/constants'
 import { Contract } from '@ethersproject/contracts'
@@ -72,3 +74,32 @@ export function getRouterContract(chainId: number, library: Web3Provider, accoun
         account
     )
 }
+
+export const getDeadline = (deadlineInMinutes = 20) =>
+    Math.floor(new Date().getTime() + Number(deadlineInMinutes) * 60);
+
+
+export const formatBalance = (balance: BigNumber | string) => {
+    if (balance) {
+        return parseFloat(ethers.utils.formatUnits(balance, 18));
+    }
+    return 0;
+};
+
+interface InputToken {
+    address: string;
+    chainId: number;
+    name: string;
+    symbol: string;
+    decimals: number;
+    logoURI?: string;
+}
+export const tokenObject = (token: InputToken) => {
+    return new Token(
+        token.chainId,
+        token.address,
+        token.decimals,
+        token.symbol,
+        token.name
+    );
+};
