@@ -1,17 +1,24 @@
 import React, { useState } from "react";
 import { Pair, TokenAmount, Fetcher, Percent } from "@uniswap/sdk";
+import { BigNumber } from "@ethersproject/bignumber";
 import Input from "../Input";
 import { useLocalStorage } from "../../hooks/useStorage";
 import { transactionConstraint } from "../../constants/index";
 import { useLiquidityAmount } from "../../state/liquidity/hooks";
-import { formatBalance, tokenObject, getContract } from "../../utils";
+import {
+  formatBalance,
+  tokenObject,
+  getContract,
+  getDeadline,
+} from "../../utils";
 import { useSushiRoll } from "../../hooks/useContracts";
 import KovanTokenList from "../../constants/tokenLists/kovanTokenList.json";
 import UniswapPairAbi from "../../constants/abi/UniswapPair.json";
 import { useActiveWeb3React } from "../../hooks";
+import { parseUnits } from "@ethersproject/units";
 
 function MigrateLiquidity() {
-  const { library, account } = useActiveWeb3React();
+  const { library, account, chainId } = useActiveWeb3React();
   const [deadline, setDeadline] = useLocalStorage(
     transactionConstraint.deadline,
     10
@@ -99,6 +106,95 @@ function MigrateLiquidity() {
     return [token1, token0];
   };
 
+  const MigrateUserLiquidity = async () => {
+    try {
+      const [tokenZero, tokenOne] = findSelectedLP();
+      const ratio = Number(liquidityAmount) / formatBalance(liqudity.amount);
+      const slippageRatio = (100 - Number(slippage)) / 100;
+      console.log(ratio);
+      const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
+      const AmountToken1 = ratio * Number(token1Amount) * slippageRatio;
+      const userLiquidity = parseUnits(liquidityAmount);
+      await sushiRollContract?.migrate(
+        tokenZero.address,
+        tokenOne.address,
+        userLiquidity,
+        0,
+        0,
+        getDeadline()
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // async function onAttemptToApprove() {
+  //   if (!pairContract || !library || !deadline) throw new Error('missing dependencies')
+  //   const liquidityAmount = parsedAmount
+  //   if (!liquidityAmount) throw new Error('missing liquidity amount')
+
+  //   if (isArgentWallet) {
+  //     return approveCallback()
+  //   }
+
+  //   // try to gather a signature for permission
+  //   const nonce = await pairContract.nonces(account)
+
+  //   const EIP712Domain = [
+  //     { name: 'name', type: 'string' },
+  //     { name: 'version', type: 'string' },
+  //     { name: 'chainId', type: 'uint256' },
+  //     { name: 'verifyingContract', type: 'address' }
+  //   ]
+  //   const domain = {
+  //     name: 'Uniswap V2',
+  //     version: '1',
+  //     chainId: chainId,
+  //     verifyingContract: pairContract.address
+  //   }
+  //   const Permit = [
+  //     { name: 'owner', type: 'address' },
+  //     { name: 'spender', type: 'address' },
+  //     { name: 'value', type: 'uint256' },
+  //     { name: 'nonce', type: 'uint256' },
+  //     { name: 'deadline', type: 'uint256' }
+  //   ]
+  //   const message = {
+  //     owner: account,
+  //     spender: stakingInfo.stakingRewardAddress,
+  //     value: liquidityAmount.raw.toString(),
+  //     nonce: nonce.toHexString(),
+  //     deadline: deadline.toNumber()
+  //   }
+  //   const data = JSON.stringify({
+  //     types: {
+  //       EIP712Domain,
+  //       Permit
+  //     },
+  //     domain,
+  //     primaryType: 'Permit',
+  //     message
+  //   })
+
+  //   library
+  //     .send('eth_signTypedData_v4', [account, data])
+  //     .then(splitSignature)
+  //     .then(signature => {
+  //       setSignatureData({
+  //         v: signature.v,
+  //         r: signature.r,
+  //         s: signature.s,
+  //         deadline: deadline.toNumber()
+  //       })
+  //     })
+  //     .catch(error => {
+  //       // for all errors other than 4001 (EIP-1193 user rejected request), fall back to manual approve
+  //       if (error?.code !== 4001) {
+  //         approveCallback()
+  //       }
+  //     })
+  // }
+
   return (
     <div>
       <Input
@@ -116,7 +212,7 @@ function MigrateLiquidity() {
           onClick={migrate}
           className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
         >
-          {loading ? " Loading..." : "Migrate Liquidity"}
+          {loading ? " Loading..." : "More liquidity details"}
         </button>
 
         {token0Symbol ? (
@@ -137,6 +233,25 @@ function MigrateLiquidity() {
               <span> {`${token1Symbol}`}</span>
 
               <span>{token1Amount}</span>
+            </p>
+            <p>
+              <Input
+                type="number"
+                value={liquidityAmount}
+                onChange={handleLPInput}
+                placeholder="amount of LP token to migrate"
+              />
+              <div className="text-red-600 font-light">
+                {error ? `${error}` : null}
+              </div>
+              <button
+                type="button"
+                disabled={loading || !!error}
+                onClick={MigrateUserLiquidity}
+                className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
+              >
+                {loading ? " Loading..." : "More liquidity details"}
+              </button>
             </p>
           </div>
         ) : null}

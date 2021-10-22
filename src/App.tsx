@@ -19,7 +19,7 @@ function App() {
       <Web3ReactManager>
         <Switch>
           <Route path="/pool" component={Pool} />
-          //Redirects every other routes to the pool route
+          {/* Redirects every other routes to the pool route */}
           <Route path="*">
             <Redirect to="/pool" />
           </Route>

@@ -75,8 +75,8 @@ export function getRouterContract(chainId: number, library: Web3Provider, accoun
     )
 }
 
-export const getDeadline = (deadlineInMinutes = 20) =>
-    Math.floor(new Date().getTime() + Number(deadlineInMinutes) * 60);
+export const getDeadline = (deadlineInMinutes: Number | string = 10) =>
+    Math.floor((new Date().getTime() / 1000) + Number(deadlineInMinutes) * 60);
 
 
 export const formatBalance = (balance: BigNumber | string) => {
