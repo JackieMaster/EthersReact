@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pair, TokenAmount, Fetcher, Percent } from "@uniswap/sdk";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ethers } from "ethers";
 import { splitSignature } from "@ethersproject/bytes";
 import { Contract } from "@ethersproject/contracts";
+import { toast } from "react-toastify";
 import Input from "../Input";
 import { useLocalStorage } from "../../hooks/useStorage";
 import { transactionConstraint } from "../../constants/index";
@@ -58,7 +59,15 @@ function MigrateLiquidity() {
   } | null>(null);
 
   const [error, setError] = useState("");
+  const [approvedPair, setApprovedPair] = useState(false);
   const userPairContract: Contract | null = usePairContract(liquidity.address);
+
+  useEffect(() => {
+    if (liquidity?.amount) {
+      migrate();
+      checkAllowance();
+    }
+  }, [liquidity]);
   const migrate = async () => {
     setLoading(true);
     const [tokenZero, tokenOne] = findSelectedLP();
@@ -105,14 +114,17 @@ function MigrateLiquidity() {
     setLiquidityAmount(event?.target?.value);
 
     const LP = formatBalance(liquidity.amount);
-    if (Number(event.target.value) > LP) {
+    if (
+      Number(event.target.value) !== 0 &&
+      BigNumber.from(event.target.value).gt(liquidity.amount)
+    ) {
       setError("Insufficient LP balance");
     } else {
       const percent = new Percent(
         event.target.value,
         liquidity.amount.toString()
       );
-      console.log(percent.toFixed(2));
+      console.log(percent.toFixed(2), event.target.value);
     }
   };
   const findSelectedLP = () => {
@@ -125,7 +137,10 @@ function MigrateLiquidity() {
     return [token1, token0];
   };
 
-  const MigrateUserLiquidity = async () => {
+  const migrateUserLiquidity = async () => {
+    if (!liquidityAmount) {
+      return setError("please enter an amount");
+    }
     try {
       const [tokenZero, tokenOne] = findSelectedLP();
       const ratio = Number(liquidityAmount) / formatBalance(liquidity.amount);
@@ -146,15 +161,41 @@ function MigrateLiquidity() {
       console.log(error);
     }
   };
+  const approveLPToken = async () => {
+    try {
+      const approvalAmount = ethers.utils.parseUnits("900000000", 18);
+      const tx = await userPairContract?.approve(SUSHI_ROLL, approvalAmount);
+      setApprovedPair(true);
+      const receipt = await tx.wait(3);
+      console.log(receipt);
+      if (receipt?.status) toast("Successfully Approved LP Token");
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  async function onAttemptToApprove() {
+  const checkAllowance = async () => {
+    try {
+      const allowance = await userPairContract?.allowance(account, SUSHI_ROLL);
+      console.log(liquidity?.amount.lt(allowance));
+      if (liquidity?.amount.lt(allowance)) {
+        setApprovedPair(true);
+      } else {
+        setApprovedPair(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  async function permit() {
     if (!pairContract || !library || !getDeadline() || !account)
       throw new Error("missing dependencies");
     const userLiquidityAmount = liquidityAmount;
 
     console.log(pairContract.address, liquidity.address);
-    // const nonce = await pairContract.nonces(account);
-    if (!liquidityAmount) throw new Error("missing liquidity amount");
+
+    if (!liquidityAmount) return setError("Please enter an amount");
 
     // try to gather a signature for permission
     const nonce = await userPairContract?.nonces(account);
@@ -199,9 +240,6 @@ function MigrateLiquidity() {
       .send("eth_signTypedData_v4", [account, data])
       .then(ethers.utils.splitSignature)
       .then((signature: any) => {
-        const address = ethers.utils.verifyMessage(data, signature);
-
-        console.log(signature, "iii", address, account, message.nonce);
         setSignatureData({
           v: signature.v,
           r: signature.r,
@@ -219,6 +257,9 @@ function MigrateLiquidity() {
   }
 
   const migrateWithPermit = async () => {
+    if (!liquidityAmount) {
+      return setError("please enter an amount");
+    }
     if (!signatureData) {
       throw new Error("No signature Data");
     }
@@ -255,24 +296,8 @@ function MigrateLiquidity() {
 
   return (
     <div>
-      <Input
-        type="number"
-        value={liquidityAmount}
-        onChange={handleLPInput}
-        placeholder="amount of LP token to migrate"
-      />
-      <div className="text-red-600 font-light">{error ? `${error}` : null}</div>
-
       <div className="p-4">
-        <button
-          type="button"
-          disabled={loading || !!error}
-          onClick={migrate}
-          className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
-        >
-          {loading ? " Loading..." : "More liquidity details"}
-        </button>
-
+        {loading ? <div>Loading...</div> : null}
         {token0Symbol ? (
           <div className="container my-4 rounded mx-auto p-4 bg-gray-200">
             <p>Your Position</p>
@@ -302,23 +327,55 @@ function MigrateLiquidity() {
               <div className="text-red-600 font-light">
                 {error ? `${error}` : null}
               </div>
-              <button
-                type="button"
-                disabled={loading || !!error}
-                onClick={onAttemptToApprove}
-                className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
-              >
-                {loading ? " Loading..." : "Sign"}
-              </button>
+              <p>Migrate</p>
+              <div className="flex flex-row">
+                <button
+                  type="button"
+                  disabled={loading || !!error}
+                  onClick={approveLPToken}
+                  className={`font-bold p-2 flex-grow text-bold text-white border rounded transition duration-300 ${
+                    approvedPair ? "bg-gray-500" : "bg-blue-700"
+                  }`}
+                >
+                  {loading ? " Loading..." : "Approve"}
+                </button>
 
-              <button
-                type="button"
-                disabled={loading || !!error}
-                onClick={migrateWithPermit}
-                className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
-              >
-                {loading ? " Loading..." : "Migrate with Permit"}
-              </button>
+                <button
+                  type="button"
+                  disabled={loading || !!error}
+                  onClick={migrateUserLiquidity}
+                  className={`font-bold p-2 flex-grow text-bold text-white border rounded transition duration-300 ${
+                    approvedPair ? "bg-blue-700" : "bg-gray-500"
+                  }`}
+                >
+                  {loading ? " Loading..." : "Migrate"}
+                </button>
+              </div>
+              <div className="flex justify-center m-5"> OR</div>
+              <p>Sign and Migrate</p>
+              <div className="flex flex-row">
+                <button
+                  type="button"
+                  disabled={loading || !!error}
+                  onClick={permit}
+                  className={`font-bold p-2 flex-grow text-bold text-white border rounded transition duration-300 ${
+                    signatureData ? "bg-gray-500" : "bg-blue-700"
+                  }`}
+                >
+                  {loading ? " Loading..." : "Sign"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={loading || !!error}
+                  onClick={migrateWithPermit}
+                  className={`font-bold p-2 flex-grow text-bold text-white border rounded transition duration-300 ${
+                    signatureData ? "bg-blue-700" : "bg-gray-500"
+                  }`}
+                >
+                  {loading ? " Loading..." : "Migrate with Permit"}
+                </button>
+              </div>
             </p>
           </div>
         ) : null}

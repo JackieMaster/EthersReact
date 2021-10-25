@@ -9,11 +9,14 @@ import Pool from "./pages/Pool";
 import NavBar from "./components/Navbar";
 import "./App.css";
 import Web3ReactManager from "./components/Web3ReactManager";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   return (
     <Router>
       <NavBar />
+      <ToastContainer />
       {/* A <Switch> looks through its children <Route>s and
             renders the first one that matches the current URL. */}
       <Web3ReactManager>
