@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Pair, TokenAmount, Fetcher, Percent } from "@uniswap/sdk";
 import { BigNumber } from "@ethersproject/bignumber";
+import { ethers } from "ethers";
+import { splitSignature } from "@ethersproject/bytes";
+import { Contract } from "@ethersproject/contracts";
 import Input from "../Input";
 import { useLocalStorage } from "../../hooks/useStorage";
 import { transactionConstraint } from "../../constants/index";
@@ -11,11 +14,17 @@ import {
   getContract,
   getDeadline,
 } from "../../utils";
-import { useSushiRoll } from "../../hooks/useContracts";
+import {
+  usePairContract,
+  useSushiRoll,
+  useV2FactoryContract,
+} from "../../hooks/useContracts";
 import KovanTokenList from "../../constants/tokenLists/kovanTokenList.json";
 import UniswapPairAbi from "../../constants/abi/UniswapPair.json";
 import { useActiveWeb3React } from "../../hooks";
 import { parseUnits } from "@ethersproject/units";
+import { SUSHI_ROLL } from "../../constants";
+import { sign } from "crypto";
 
 function MigrateLiquidity() {
   const { library, account, chainId } = useActiveWeb3React();
@@ -32,15 +41,24 @@ function MigrateLiquidity() {
 
   const [loading, setLoading] = useState(false);
   const sushiRollContract = useSushiRoll();
-  const liqudity = useLiquidityAmount();
+
+  const factory = useV2FactoryContract();
+
+  const [pairContract, setPairContract] = useState<any>();
   const [LP, setLP] = useState("");
   const [token0Symbol, setToken0Symbol] = useState<string | undefined>("");
   const [token1Symbol, setToken1Symbol] = useState<string | undefined>("");
   const [token0Amount, setToken0Amount] = useState<string | undefined>("");
   const [token1Amount, setToken1Amount] = useState<string | undefined>("");
+  const [signatureData, setSignatureData] = useState<{
+    v: number;
+    r: string;
+    s: string;
+    deadline: number;
+  } | null>(null);
 
   const [error, setError] = useState("");
-
+  const userPairContract: Contract | null = usePairContract(liquidity.address);
   const migrate = async () => {
     setLoading(true);
     const [tokenZero, tokenOne] = findSelectedLP();
@@ -53,6 +71,7 @@ function MigrateLiquidity() {
     //   library,
     //   account
     // );
+    setPairContract(PairData);
 
     const token00 = PairData.reserve0.token;
     const token11 = PairData.reserve1.token;
@@ -109,7 +128,7 @@ function MigrateLiquidity() {
   const MigrateUserLiquidity = async () => {
     try {
       const [tokenZero, tokenOne] = findSelectedLP();
-      const ratio = Number(liquidityAmount) / formatBalance(liqudity.amount);
+      const ratio = Number(liquidityAmount) / formatBalance(liquidity.amount);
       const slippageRatio = (100 - Number(slippage)) / 100;
       console.log(ratio);
       const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
@@ -128,72 +147,111 @@ function MigrateLiquidity() {
     }
   };
 
-  // async function onAttemptToApprove() {
-  //   if (!pairContract || !library || !deadline) throw new Error('missing dependencies')
-  //   const liquidityAmount = parsedAmount
-  //   if (!liquidityAmount) throw new Error('missing liquidity amount')
+  async function onAttemptToApprove() {
+    if (!pairContract || !library || !getDeadline() || !account)
+      throw new Error("missing dependencies");
+    const userLiquidityAmount = liquidityAmount;
 
-  //   if (isArgentWallet) {
-  //     return approveCallback()
-  //   }
+    console.log(pairContract.address, liquidity.address);
+    // const nonce = await pairContract.nonces(account);
+    if (!liquidityAmount) throw new Error("missing liquidity amount");
 
-  //   // try to gather a signature for permission
-  //   const nonce = await pairContract.nonces(account)
+    // try to gather a signature for permission
+    const nonce = await userPairContract?.nonces(account);
+    const deadline = Number(getDeadline());
+    const EIP712Domain = [
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+    ];
+    const domain = {
+      name: "Uniswap V2",
+      version: "1",
+      chainId: chainId,
+      verifyingContract: liquidity.address,
+    };
+    const Permit = [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "nonce", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+    ];
+    const message = {
+      owner: account,
+      spender: SUSHI_ROLL,
+      value: 100000000000000,
+      nonce: nonce.toHexString(),
+      deadline,
+    };
+    const data = JSON.stringify({
+      types: {
+        EIP712Domain,
+        Permit,
+      },
+      domain,
+      primaryType: "Permit",
+      message,
+    });
 
-  //   const EIP712Domain = [
-  //     { name: 'name', type: 'string' },
-  //     { name: 'version', type: 'string' },
-  //     { name: 'chainId', type: 'uint256' },
-  //     { name: 'verifyingContract', type: 'address' }
-  //   ]
-  //   const domain = {
-  //     name: 'Uniswap V2',
-  //     version: '1',
-  //     chainId: chainId,
-  //     verifyingContract: pairContract.address
-  //   }
-  //   const Permit = [
-  //     { name: 'owner', type: 'address' },
-  //     { name: 'spender', type: 'address' },
-  //     { name: 'value', type: 'uint256' },
-  //     { name: 'nonce', type: 'uint256' },
-  //     { name: 'deadline', type: 'uint256' }
-  //   ]
-  //   const message = {
-  //     owner: account,
-  //     spender: stakingInfo.stakingRewardAddress,
-  //     value: liquidityAmount.raw.toString(),
-  //     nonce: nonce.toHexString(),
-  //     deadline: deadline.toNumber()
-  //   }
-  //   const data = JSON.stringify({
-  //     types: {
-  //       EIP712Domain,
-  //       Permit
-  //     },
-  //     domain,
-  //     primaryType: 'Permit',
-  //     message
-  //   })
+    library
+      .send("eth_signTypedData_v4", [account, data])
+      .then(ethers.utils.splitSignature)
+      .then((signature: any) => {
+        const address = ethers.utils.verifyMessage(data, signature);
 
-  //   library
-  //     .send('eth_signTypedData_v4', [account, data])
-  //     .then(splitSignature)
-  //     .then(signature => {
-  //       setSignatureData({
-  //         v: signature.v,
-  //         r: signature.r,
-  //         s: signature.s,
-  //         deadline: deadline.toNumber()
-  //       })
-  //     })
-  //     .catch(error => {
-  //       // for all errors other than 4001 (EIP-1193 user rejected request), fall back to manual approve
-  //       if (error?.code !== 4001) {
-  //         approveCallback()
-  //       }
-  //     })
-  // }
+        console.log(signature, "iii", address, account, message.nonce);
+        setSignatureData({
+          v: signature.v,
+          r: signature.r,
+          s: signature.s,
+          deadline,
+        });
+      })
+      .catch((error: any) => {
+        // for all errors other than 4001 (EIP-1193 user rejected request), fall back to manual approve
+        console.log(error);
+        if (error?.code !== 4001) {
+          console.log("user rejected request");
+        }
+      });
+  }
+
+  const migrateWithPermit = async () => {
+    if (!signatureData) {
+      throw new Error("No signature Data");
+    }
+    const [tokenZero, tokenOne] = findSelectedLP();
+    const { v, r, s, deadline } = signatureData;
+    console.log(
+      tokenOne.address,
+      tokenZero.address,
+      100000000000000,
+      0,
+      0,
+      deadline,
+      v,
+      r,
+      s
+    );
+    try {
+      await sushiRollContract?.migrateWithPermit(
+        tokenZero.address,
+        tokenOne.address,
+        100000000000000,
+        0,
+        0,
+        signatureData?.deadline,
+        v,
+        r,
+        s,
+        { gasLimit: 3500000 }
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <div>
@@ -221,7 +279,7 @@ function MigrateLiquidity() {
             <p className="flex justify-between ...">
               <span> {`${token0Symbol}/${token1Symbol}`}</span>
 
-              <span>{formatBalance(liqudity.amount)}</span>
+              <span>{formatBalance(liquidity.amount)}</span>
             </p>
             <p className="flex justify-between ...">
               <span> {`${token0Symbol}`}</span>
@@ -247,10 +305,19 @@ function MigrateLiquidity() {
               <button
                 type="button"
                 disabled={loading || !!error}
-                onClick={MigrateUserLiquidity}
+                onClick={onAttemptToApprove}
                 className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
               >
-                {loading ? " Loading..." : "More liquidity details"}
+                {loading ? " Loading..." : "Sign"}
+              </button>
+
+              <button
+                type="button"
+                disabled={loading || !!error}
+                onClick={migrateWithPermit}
+                className="font-bold p-2 min-w-full text-bold text-white border rounded bg-blue-700 rounded transition duration-300"
+              >
+                {loading ? " Loading..." : "Migrate with Permit"}
               </button>
             </p>
           </div>
