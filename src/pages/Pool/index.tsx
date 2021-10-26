@@ -14,7 +14,9 @@ export default function Pool() {
       </h3>
       <div className="grid gap-x-4 gap-y-4 md:grid-cols-3  bg-gray-100 px-2 py-2 rounded">
         <div className="  shadow-md border-gray-100 rounded border-1 bg-white">
-          <div className="p-2 font-bold">COPY TO FIND YOUR LP TOKEN</div>
+          <div className="p-2 font-bold">
+            CLICK THE COPY ICON TO COPY ADDRESS
+          </div>
           {KovanTokenList.tokens.map((token, index) => (
             <Token token={token} key={index + token.symbol} />
           ))}

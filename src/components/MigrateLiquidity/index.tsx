@@ -147,8 +147,8 @@ function MigrateLiquidity() {
         token1Amount?.raw.toString()
       );
 
-      const userAmountAmin = calculateSlippageAmount(token0Amount, 1000);
-      const userAmountBmin = calculateSlippageAmount(token1Amount, 1000);
+      const userAmountAmin = calculateSlippageAmount(token0Amount, 2000);
+      const userAmountBmin = calculateSlippageAmount(token1Amount, 2000);
       let amountAMin = JSBI.divide(
         JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
         JSBI.BigInt(100)
@@ -311,8 +311,8 @@ function MigrateLiquidity() {
       liquidity.amount
     );
 
-    const userAmountAmin = calculateSlippageAmount(token0Amount, 1000);
-    const userAmountBmin = calculateSlippageAmount(token1Amount, 1000);
+    const userAmountAmin = calculateSlippageAmount(token0Amount, 2000);
+    const userAmountBmin = calculateSlippageAmount(token1Amount, 2000);
     let amountAMin = JSBI.divide(
       JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
       JSBI.BigInt(100)
