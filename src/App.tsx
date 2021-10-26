@@ -7,7 +7,6 @@ import {
 } from "react-router-dom";
 import Pool from "./pages/Pool";
 import NavBar from "./components/Navbar";
-import "./App.css";
 import Web3ReactManager from "./components/Web3ReactManager";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
