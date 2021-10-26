@@ -130,6 +130,7 @@ function MigrateLiquidity() {
   };
 
   const migrateUserLiquidity = async () => {
+    setError("");
     if (!liquidityAmount) {
       return setError("please enter an amount");
     }
@@ -140,6 +141,7 @@ function MigrateLiquidity() {
       // console.log(ratio);
       // const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
       // const AmountToken1 = ratio * Number(token1Amount) * slippageRatio;
+      console.log(token0Amount, token1Amount?.raw.toString());
       const percent = new Percent(
         ethers.utils.parseUnits(liquidityAmount).toString(),
         liquidity.amount
@@ -148,11 +150,11 @@ function MigrateLiquidity() {
       const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
       const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
       let amountAMin = JSBI.divide(
-        JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toSignificant(2))),
+        JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
         JSBI.BigInt(100)
       ).toString();
       let amountBMin = JSBI.divide(
-        JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toSignificant(2))),
+        JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toFixed(0))),
         JSBI.BigInt(100)
       ).toString();
 
@@ -196,7 +198,7 @@ function MigrateLiquidity() {
         amountAMin,
         amountBMin,
         getDeadline(),
-        { gasLimit: "350000" }
+        { gasLimit: 3500000 }
       );
       const receipt = await tx.wait(3);
 
@@ -234,6 +236,7 @@ function MigrateLiquidity() {
   };
 
   async function permit() {
+    setError("");
     if (!pairContract || !library || !getDeadline() || !account)
       throw new Error("missing dependencies");
     const userLiquidityAmount = liquidityAmount;
@@ -304,6 +307,7 @@ function MigrateLiquidity() {
   }
 
   const migrateWithPermit = async () => {
+    setError("");
     if (!liquidityAmount) {
       return setError("please enter an amount");
     }
@@ -319,11 +323,11 @@ function MigrateLiquidity() {
     const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
     const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
     let amountAMin = JSBI.divide(
-      JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toSignificant(2))),
+      JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
       JSBI.BigInt(100)
     ).toString();
     let amountBMin = JSBI.divide(
-      JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toSignificant(2))),
+      JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toFixed(0))),
       JSBI.BigInt(100)
     ).toString();
 
