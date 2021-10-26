@@ -19,3 +19,7 @@ https://sushiroll.netlify.app/
 - run `yarn install`
 - then run yarn start to start the Dapp
 - the dapp will be started locally on port 3000
+
+#### Demo
+
+https://www.loom.com/share/1e332e044da0490680a69959c4dc7393
