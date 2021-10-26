@@ -311,8 +311,8 @@ function MigrateLiquidity() {
       liquidity.amount
     );
 
-    const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
-    const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
+    const userAmountAmin = calculateSlippageAmount(token0Amount, 1000);
+    const userAmountBmin = calculateSlippageAmount(token1Amount, 1000);
     let amountAMin = JSBI.divide(
       JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
       JSBI.BigInt(100)
