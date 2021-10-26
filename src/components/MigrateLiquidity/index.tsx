@@ -136,19 +136,19 @@ function MigrateLiquidity() {
     }
     try {
       const [tokenZero, tokenOne] = findSelectedLP();
-      // const ratio = Number(liquidityAmount) / formatBalance(liquidity.amount);
-      // const slippageRatio = (100 - Number(slippage)) / 100;
-      // console.log(ratio);
-      // const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
-      // const AmountToken1 = ratio * Number(token1Amount) * slippageRatio;
-      console.log(token0Amount, token1Amount?.raw.toString());
+
       const percent = new Percent(
         ethers.utils.parseUnits(liquidityAmount).toString(),
         liquidity.amount
       );
+      console.log(
+        percent.toFixed(0),
+        token0Amount,
+        token1Amount?.raw.toString()
+      );
 
-      const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
-      const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
+      const userAmountAmin = calculateSlippageAmount(token0Amount, 1000);
+      const userAmountBmin = calculateSlippageAmount(token1Amount, 1000);
       let amountAMin = JSBI.divide(
         JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toFixed(0))),
         JSBI.BigInt(100)
@@ -179,17 +179,6 @@ function MigrateLiquidity() {
         amountAMin = temp;
       }
 
-      // if (userAmountAmin && userAmountAmin?.length) {
-      //   console.log(
-      //     JSBI.divide(
-      //       JSBI.multiply(
-      //         userAmountAmin[0],
-      //         JSBI.BigInt(percent.toSignificant(2))
-      //       ),
-      //       JSBI.BigInt(100)
-      //     ).toString()
-      //   );
-      // }
       const userLiquidity = parseUnits(liquidityAmount);
       const tx = await sushiRollContract?.migrate(
         tokenZero.address,
@@ -202,8 +191,10 @@ function MigrateLiquidity() {
       );
       const receipt = await tx.wait(3);
 
-      if (receipt?.status) toast("Migration Successful");
-      window.location.reload();
+      if (receipt?.status) {
+        toast("Migration Successful");
+        window.location.reload();
+      }
     } catch (error) {
       console.log(error);
     }
@@ -245,7 +236,7 @@ function MigrateLiquidity() {
 
     if (!liquidityAmount) return setError("Please enter an amount");
 
-    // try to gather a signature for permission
+    // gather signature for permit
     const nonce = await userPairContract?.nonces(account);
     const deadline = Number(getDeadline());
     const userLiquidity = parseUnits(liquidityAmount);
@@ -369,8 +360,10 @@ function MigrateLiquidity() {
       );
       const receipt = await tx.wait(3);
 
-      if (receipt?.status) toast("Migration Successful");
-      window.location.reload();
+      if (receipt?.status) {
+        toast("Migration Successful");
+        window.location.reload();
+      }
     } catch (error) {
       console.log(error);
     }
@@ -406,10 +399,10 @@ function MigrateLiquidity() {
                 onChange={handleLPInput}
                 placeholder="amount of LP token to migrate"
               />
-              <div className="text-red-600 font-light">
+              <span className="text-red-600 font-light">
                 {error ? `${error}` : null}
-              </div>
-              <p>Migrate</p>
+              </span>
+              <span>Migrate</span>
               <div className="flex flex-row">
                 <button
                   type="button"
