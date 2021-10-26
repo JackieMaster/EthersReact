@@ -1,7 +1,7 @@
 import { getAddress } from '@ethersproject/address'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'ethers'
-import { ChainId, Token } from '@uniswap/sdk'
+import { ChainId, Token, TokenAmount, JSBI } from '@uniswap/sdk'
 import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
 import { AddressZero } from '@ethersproject/constants'
 import { Contract } from '@ethersproject/contracts'
@@ -103,3 +103,17 @@ export const tokenObject = (token: InputToken) => {
         token.name
     );
 };
+
+
+export function calculateSlippageAmount(value: TokenAmount | undefined, slippage: number): any {
+    if (!value) {
+        return console.log('value cannot be undefined')
+    }
+    if (slippage < 0 || slippage > 10000) {
+        throw Error(`Unexpected slippage value: ${slippage}`)
+    }
+    return [
+        JSBI.divide(JSBI.multiply(value.raw, JSBI.BigInt(10000 - slippage)), JSBI.BigInt(10000)),
+        JSBI.divide(JSBI.multiply(value.raw, JSBI.BigInt(10000 + slippage)), JSBI.BigInt(10000))
+    ]
+}

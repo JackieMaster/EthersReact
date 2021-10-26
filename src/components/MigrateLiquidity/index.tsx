@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Pair, TokenAmount, Fetcher, Percent } from "@uniswap/sdk";
+import { Pair, Token, TokenAmount, Fetcher, Percent, JSBI } from "@uniswap/sdk";
 import { BigNumber } from "@ethersproject/bignumber";
 import { ethers } from "ethers";
 import { splitSignature } from "@ethersproject/bytes";
@@ -14,6 +14,7 @@ import {
   tokenObject,
   getContract,
   getDeadline,
+  calculateSlippageAmount,
 } from "../../utils";
 import {
   usePairContract,
@@ -49,13 +50,14 @@ function MigrateLiquidity() {
   const [LP, setLP] = useState("");
   const [token0Symbol, setToken0Symbol] = useState<string | undefined>("");
   const [token1Symbol, setToken1Symbol] = useState<string | undefined>("");
-  const [token0Amount, setToken0Amount] = useState<string | undefined>("");
-  const [token1Amount, setToken1Amount] = useState<string | undefined>("");
+  const [token0Amount, setToken0Amount] = useState<TokenAmount | undefined>();
+  const [token1Amount, setToken1Amount] = useState<TokenAmount | undefined>();
   const [signatureData, setSignatureData] = useState<{
     v: number;
     r: string;
     s: string;
     deadline: number;
+    userLiquidity: string;
   } | null>(null);
 
   const [error, setError] = useState("");
@@ -64,26 +66,22 @@ function MigrateLiquidity() {
 
   useEffect(() => {
     if (liquidity?.amount) {
-      migrate();
+      getPoolShare();
       checkAllowance();
     }
   }, [liquidity]);
-  const migrate = async () => {
+
+  const getPoolShare = async () => {
     setLoading(true);
     const [tokenZero, tokenOne] = findSelectedLP();
     const Token0 = tokenObject(tokenZero);
     const Token1 = tokenObject(tokenOne);
     const PairData = await Fetcher.fetchPairData(Token0, Token1);
-    // const PairContract = getContract(
-    //   PairData.liquidityToken.address,
-    //   UniswapPairAbi,
-    //   library,
-    //   account
-    // );
+
     setPairContract(PairData);
 
-    const token00 = PairData.reserve0.token;
-    const token11 = PairData.reserve1.token;
+    const token00: Token = PairData.reserve0.token;
+    const token11: Token = PairData.reserve1.token;
     // const [token00Amount, token11Amount] = await PairContract.getReserves();
 
     const tokenAAmount = PairData.getLiquidityValue(
@@ -98,15 +96,9 @@ function MigrateLiquidity() {
     );
     setToken0Symbol(tokenAAmount.token.symbol);
     setToken1Symbol(tokenBAmount.token.symbol);
-    setToken0Amount(tokenAAmount.toFixed(4));
-    setToken1Amount(tokenBAmount.toFixed(4));
+    setToken0Amount(tokenAAmount);
+    setToken1Amount(tokenBAmount);
 
-    console.log(
-      tokenAAmount.toFixed(4),
-      tokenAAmount.token.symbol,
-      tokenBAmount.toFixed(4),
-      tokenBAmount.token.symbol
-    );
     setLoading(false);
   };
   const handleLPInput = (event: any) => {
@@ -114,18 +106,18 @@ function MigrateLiquidity() {
     setLiquidityAmount(event?.target?.value);
 
     const LP = formatBalance(liquidity.amount);
-    if (
-      Number(event.target.value) !== 0 &&
-      BigNumber.from(event.target.value).gt(liquidity.amount)
-    ) {
-      setError("Insufficient LP balance");
-    } else {
-      const percent = new Percent(
-        event.target.value,
-        liquidity.amount.toString()
-      );
-      console.log(percent.toFixed(2), event.target.value);
-    }
+    // if (
+    //   Number(event.target.value) !== 0 &&
+    //   BigNumber.from(event.target.value).gt(liquidity.amount)
+    // ) {
+    //   setError("Insufficient LP balance");
+    // } else {
+    //   const percent = new Percent(
+    //     event.target.value,
+    //     liquidity.amount.toString()
+    //   );
+    //   console.log(percent.toFixed(2), event.target.value);
+    // }
   };
   const findSelectedLP = () => {
     const [token1, token0] = KovanTokenList.tokens.filter((token) => {
@@ -143,20 +135,73 @@ function MigrateLiquidity() {
     }
     try {
       const [tokenZero, tokenOne] = findSelectedLP();
-      const ratio = Number(liquidityAmount) / formatBalance(liquidity.amount);
-      const slippageRatio = (100 - Number(slippage)) / 100;
-      console.log(ratio);
-      const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
-      const AmountToken1 = ratio * Number(token1Amount) * slippageRatio;
+      // const ratio = Number(liquidityAmount) / formatBalance(liquidity.amount);
+      // const slippageRatio = (100 - Number(slippage)) / 100;
+      // console.log(ratio);
+      // const AmountToken0 = ratio * Number(token0Amount) * slippageRatio;
+      // const AmountToken1 = ratio * Number(token1Amount) * slippageRatio;
+      const percent = new Percent(
+        ethers.utils.parseUnits(liquidityAmount).toString(),
+        liquidity.amount
+      );
+
+      const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
+      const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
+      let amountAMin = JSBI.divide(
+        JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toSignificant(2))),
+        JSBI.BigInt(100)
+      ).toString();
+      let amountBMin = JSBI.divide(
+        JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toSignificant(2))),
+        JSBI.BigInt(100)
+      ).toString();
+
+      const tokenZeroObj = new Token(
+        chainId,
+        tokenZero.address,
+        tokenZero.decimals,
+        tokenZero.symbol,
+        tokenZero.name
+      );
+      const tokenOneObj = new Token(
+        chainId,
+        tokenOne.address,
+        tokenOne.decimals,
+        tokenOne.symbol,
+        tokenOne.name
+      );
+
+      if (tokenOneObj.sortsBefore(tokenZeroObj)) {
+        let temp = amountBMin;
+        amountBMin = amountAMin;
+        amountAMin = temp;
+      }
+
+      // if (userAmountAmin && userAmountAmin?.length) {
+      //   console.log(
+      //     JSBI.divide(
+      //       JSBI.multiply(
+      //         userAmountAmin[0],
+      //         JSBI.BigInt(percent.toSignificant(2))
+      //       ),
+      //       JSBI.BigInt(100)
+      //     ).toString()
+      //   );
+      // }
       const userLiquidity = parseUnits(liquidityAmount);
-      await sushiRollContract?.migrate(
+      const tx = await sushiRollContract?.migrate(
         tokenZero.address,
         tokenOne.address,
         userLiquidity,
-        0,
-        0,
-        getDeadline()
+        amountAMin,
+        amountBMin,
+        getDeadline(),
+        { gasLimit: "350000" }
       );
+      const receipt = await tx.wait(3);
+
+      if (receipt?.status) toast("Migration Successful");
+      window.location.reload();
     } catch (error) {
       console.log(error);
     }
@@ -200,6 +245,7 @@ function MigrateLiquidity() {
     // try to gather a signature for permission
     const nonce = await userPairContract?.nonces(account);
     const deadline = Number(getDeadline());
+    const userLiquidity = parseUnits(liquidityAmount);
     const EIP712Domain = [
       { name: "name", type: "string" },
       { name: "version", type: "string" },
@@ -222,7 +268,7 @@ function MigrateLiquidity() {
     const message = {
       owner: account,
       spender: SUSHI_ROLL,
-      value: 100000000000000,
+      value: userLiquidity.toString(),
       nonce: nonce.toHexString(),
       deadline,
     };
@@ -245,6 +291,7 @@ function MigrateLiquidity() {
           r: signature.r,
           s: signature.s,
           deadline,
+          userLiquidity: userLiquidity.toString(),
         });
       })
       .catch((error: any) => {
@@ -264,31 +311,62 @@ function MigrateLiquidity() {
       throw new Error("No signature Data");
     }
     const [tokenZero, tokenOne] = findSelectedLP();
-    const { v, r, s, deadline } = signatureData;
-    console.log(
-      tokenOne.address,
-      tokenZero.address,
-      100000000000000,
-      0,
-      0,
-      deadline,
-      v,
-      r,
-      s
+    const percent = new Percent(
+      ethers.utils.parseUnits(liquidityAmount).toString(),
+      liquidity.amount
     );
+
+    const userAmountAmin = calculateSlippageAmount(token0Amount, 500);
+    const userAmountBmin = calculateSlippageAmount(token1Amount, 500);
+    let amountAMin = JSBI.divide(
+      JSBI.multiply(userAmountAmin[0], JSBI.BigInt(percent.toSignificant(2))),
+      JSBI.BigInt(100)
+    ).toString();
+    let amountBMin = JSBI.divide(
+      JSBI.multiply(userAmountBmin[0], JSBI.BigInt(percent.toSignificant(2))),
+      JSBI.BigInt(100)
+    ).toString();
+
+    const tokenZeroObj = new Token(
+      chainId,
+      tokenZero.address,
+      tokenZero.decimals,
+      tokenZero.symbol,
+      tokenZero.name
+    );
+    const tokenOneObj = new Token(
+      chainId,
+      tokenOne.address,
+      tokenOne.decimals,
+      tokenOne.symbol,
+      tokenOne.name
+    );
+
+    if (tokenOneObj.sortsBefore(tokenZeroObj)) {
+      let temp = amountBMin;
+      amountBMin = amountAMin;
+      amountAMin = temp;
+    }
+
+    const { v, r, s, deadline, userLiquidity } = signatureData;
+
     try {
-      await sushiRollContract?.migrateWithPermit(
+      const tx = await sushiRollContract?.migrateWithPermit(
         tokenZero.address,
         tokenOne.address,
-        100000000000000,
-        0,
-        0,
-        signatureData?.deadline,
+        userLiquidity,
+        amountAMin,
+        amountBMin,
+        deadline,
         v,
         r,
         s,
         { gasLimit: 3500000 }
       );
+      const receipt = await tx.wait(3);
+
+      if (receipt?.status) toast("Migration Successful");
+      window.location.reload();
     } catch (error) {
       console.log(error);
     }
@@ -309,13 +387,13 @@ function MigrateLiquidity() {
             <p className="flex justify-between ...">
               <span> {`${token0Symbol}`}</span>
 
-              <span>{token0Amount}</span>
+              <span>{token0Amount?.toFixed(4)}</span>
             </p>
 
             <p className="flex justify-between ...">
               <span> {`${token1Symbol}`}</span>
 
-              <span>{token1Amount}</span>
+              <span>{token1Amount?.toFixed(4)}</span>
             </p>
             <p>
               <Input
