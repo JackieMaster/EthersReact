@@ -1,4 +1,4 @@
-import React, { FC, useState } from "react";
+import React, { FC } from "react";
 import { shortenAddress } from "../../utils";
 
 interface TokenProp {
@@ -27,7 +27,7 @@ const Index: FC<TokenProp> = ({ token }: TokenProp) => {
               {token.symbol}
             </span>
             <span className="text-sm flex text-gray-600">{token.name}</span>
-            <span className="text-sm flex text-gray-600">
+            <span className="text-sm flex font-thin text-gray-600">
               {shortenAddress(token.address)}
             </span>
           </div>
